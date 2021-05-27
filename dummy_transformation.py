@@ -8,6 +8,15 @@ def set_people():
     time.sleep(0.5)
     return output
 
+def simple_decision_people(radiant):
+    if radiant>=0 and radiant<=500:
+        return float(50.0)
+    elif radiant>500 and radiant<700:
+        return float(10.0)
+    elif radiant>700:
+        return float(0.0)
+
+# TODO DE VERDAD CHECKEAR LINEALIDAD
 
 
 
