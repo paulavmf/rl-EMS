@@ -4,6 +4,7 @@ import sys
 sys.path.insert(0, '/usr/local/EnergyPlus-9-4-0')
 from pyenergyplus.api import EnergyPlusAPI
 from dummy_transformation import  set_people, simple_decision_people
+from rlStudies.simplerl import applay_random_action
 
 one_time = True
 solar_sensor = 0
@@ -11,6 +12,7 @@ people_actuator = 0
 people_sensor = 0
 n = 0
 m = 0
+episode = 0
 
 idffile = '/home/paula/Documentos/Doctorado/Desarrollo/rl-cacharreo/Model/2ZoneDataCenterHVAC_wEconomizer.idf'
 iddfile = '/usr/local/EnergyPlus-9-4-0/Energy+.idd'
@@ -18,7 +20,6 @@ epwfile = '/home/paula/Documentos/Doctorado/Desarrollo/EPProject/input/wheather_
 output = '/home/paula/Documentos/Doctorado/Desarrollo/EPProject/APItesting/'
 # idffile = '/home/paula/Documentos/Doctorado/Desarrollo/rl-cacharreo/Model/1ZoneUncontrolled_win_1.idf'
 # idffile = '/home/paula/Documentos/Doctorado/Desarrollo/rl-cacharreo/Model/1ZoneUncontrolled_win_1.idf'
-
 def my_handler(state):
     global one_time, solar_sensor, people_actuator, n, m, people_sensor, people, Radiation_Rate
     sys.stdout.flush()
@@ -55,6 +56,7 @@ def my_handler(state):
         if Radiation_Rate > 700:
             api.exchange.set_actuator_value(state,people_actuator,set_people())
             print(f"demasiado {Radiation_Rate}")
+
 
 def my_handler_function_decision(state):
     global one_time, solar_sensor, people_actuator, n, m, people_sensor, people, Radiation_Rate
@@ -93,6 +95,31 @@ def my_handler_function_decision(state):
             people = api.exchange.get_variable_value(state,people_sensor)
             print(f"{people} average after reset actuator")
 
+def rl_handler(state):
+    global one_time, solar_sensor, people_actuator, n, m, people_sensor, people, Radiation_Rate,episode
+    sys.stdout.flush()
+    # TODO debería pedir el handle solo una vez ??? no entiendo xq
+    if api.exchange.api_data_fully_ready(state):
+        if one_time:
+            people_actuator = api.exchange.get_actuator_handle(
+                state ,"People","Number of People","WEST ZONE PEOPLE"
+            )
+            people_sensor = api.exchange.get_variable_handle(
+                state,"Zone People Occupant Count", "West Zone" )
+            if solar_sensor == -1 or people_actuator == -1:
+                sys.exit(1)
+            # pongo el numero de genet a 30 al principio( tmb podría hacerlo en el idf file)
+            api.exchange.set_actuator_value(state, people_actuator, 30)
+        one_time = False
+        hour = api.exchange.hour(state)
+        day = api.exchange.day_of_month(state)
+        month = api.exchange.month(state)
+        if month == 1:
+            people = api.exchange.get_variable_value(state,people_sensor)
+            value,episode = applay_random_action(people,episode)
+            api.exchange.set_actuator_value(state, people_actuator, value)
+            people = api.exchange.get_variable_value(state, people_sensor)
+            print(f"{people} average after actuator in episode {episode}")
 
 
 if __name__ == '__main__':
@@ -100,7 +127,7 @@ if __name__ == '__main__':
     state = api.state_manager.new_state()
     print("this is called only once")
     # new_temp = set_new_temp()
-    api.runtime.callback_begin_system_timestep_before_predictor(state, my_handler)
+    api.runtime.callback_begin_system_timestep_before_predictor(state, rl_handler)
     # api.runtime.callback_begin_system_timestep_before_predictor(state, my_handler_function_decision)
     # api.exchange.request_variable(state, "SITE OUTDOOR AIR DRYBULB TEMPERATURE", "ENVIRONMENT")
     # api.exchange.request_variable(state, "SITE OUTDOOR AIR DEWPOINT TEMPERATURE", "ENVIRONMENT")
