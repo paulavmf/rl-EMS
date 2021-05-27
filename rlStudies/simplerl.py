@@ -1,11 +1,7 @@
 from gym import Env
 from gym.spaces import Discrete, Box
-import numpy as np
 import random
 import numpy as np
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, Flatten
-from tensorflow.keras.optimizers import Adam
 
 '''
 goal controlar mi variable : gente que hay dentro de la habitación entre un rango (imaginar que es un centro comercial)
@@ -85,19 +81,3 @@ def applay_random_action(npop, episode):
         episode = +1
         print('Episode:{} Score:{}'.format(episode, score))
         return float(n_state), episode
-
-
-def build_model(states, actions):
-    model = Sequential()
-    model.add(Dense(24, activation='relu', input_shape=states))
-    model.add(Dense(24, activation='relu'))
-    model.add(Dense(actions, activation='linear'))
-    return model
-
-
-def run_model(environment):
-    env = environment()
-    states = env.observation_space.shape
-    actions = env.action_space.n
-    model = build_model(states, actions)
-    return model
