@@ -23,7 +23,7 @@ class PopZoneEnv(Env):
         # Set shower length
         # el tiempo que me voy a pasar regulando la entrada y salida de gente
         # en mi caso sería más bien los time steps???
-        self.shower_length = 60
+        self.leaning_duration = 100
 
     def step(self, action):
         # Apply action
@@ -32,7 +32,7 @@ class PopZoneEnv(Env):
         # 2 -1 = 1 temperature
         self.state += action - 1 # el nuevo state es el resultado de la acción
         # Reduce shower length by 1 second
-        self.shower_length -= 1 # time step menos 1
+        self.leaning_duration -= 1 # time step menos 1
 
         # Calculate reward
         if self.state >= 20 and self.state <= 25:
@@ -41,7 +41,7 @@ class PopZoneEnv(Env):
             reward = -1
 
             # Check if shower is done
-        if self.shower_length <= 0:
+        if self.leaning_duration <= 0:
             done = True
         else:
             done = False
@@ -62,7 +62,7 @@ class PopZoneEnv(Env):
         # Reset shower temperature
         self.state = 30 + random.randint(-3, 3) # esto lo haré haciendo el reseteo del actuator? vuelve a comenzar un episodio.. esto lo haré yo cada día
         # Reset shower time
-        self.shower_length = 60
+        self.leaning_duration = 100
         return self.state
 
 def applay_random_action(npop, episode):
