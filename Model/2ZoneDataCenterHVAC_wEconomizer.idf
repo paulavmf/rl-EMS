@@ -143,10 +143,10 @@
   RunPeriod,
     WinterSeasonDay,         !- Name
     1,                       !- Begin Month
-    12,                      !- Begin Day of Month
+    1,                      !- Begin Day of Month
     ,                        !- Begin Year
     1,                       !- End Month
-    14,                      !- End Day of Month
+    30,                      !- End Day of Month
     ,                        !- End Year
     Tuesday,                 !- Day of Week for Start Day
     Yes,                     !- Use Weather File Holidays and Special Days
@@ -158,10 +158,10 @@
   RunPeriod,
     SpringSeasonDay,         !- Name
     4,                       !- Begin Month
-    14,                      !- Begin Day of Month
+    1,                      !- Begin Day of Month
     ,                        !- Begin Year
     4,                       !- End Month
-    16,                      !- End Day of Month
+    30,                      !- End Day of Month
     ,                        !- End Year
     Tuesday,                 !- Day of Week for Start Day
     Yes,                     !- Use Weather File Holidays and Special Days
@@ -173,10 +173,10 @@
   RunPeriod,
     SummerSeasonDay,         !- Name
     7,                       !- Begin Month
-    14,                      !- Begin Day of Month
+    1,                      !- Begin Day of Month
     ,                        !- Begin Year
     7,                       !- End Month
-    16,                      !- End Day of Month
+    30,                      !- End Day of Month
     ,                        !- End Year
     Tuesday,                 !- Day of Week for Start Day
     Yes,                     !- Use Weather File Holidays and Special Days
@@ -188,10 +188,10 @@
   RunPeriod,
     AutumnSeasonDay,         !- Name
     10,                      !- Begin Month
-    12,                      !- Begin Day of Month
+    1,                      !- Begin Day of Month
     ,                        !- Begin Year
     10,                      !- End Month
-    16,                      !- End Day of Month
+    30,                      !- End Day of Month
     ,                        !- End Year
     Tuesday,                 !- Day of Week for Start Day
     Yes,                     !- Use Weather File Holidays and Special Days
@@ -2660,9 +2660,9 @@
   People,
     West Zone PEOPLE,        !- Name
     West Zone,               !- Zone or ZoneList Name
-    OFFICE OCCUPANCY,        !- Number of People Schedule Name
+    CONSTANT OFFICE OCCUPANCY,        !- Number of People Schedule Name
     people,                  !- Number of People Calculation Method
-    0,                       !- Number of People
+    100,                     !- Number of People
     ,                        !- People per Zone Floor Area {person/m2}
     ,                        !- Zone Floor Area per Person {m2/person}
     0.3000000,               !- Fraction Radiant
@@ -2753,6 +2753,15 @@
     Until: 24:00,0.0,        !- Field 19
     For: AllOtherDays,       !- Field 21
     Until: 24:00,0.0;        !- Field 22
+
+  Schedule:Compact,
+    CONSTANT OFFICE OCCUPANCY,        !- Name
+    Fraction,                !- Schedule Type Limits Name
+    Through: 12/31,          !- Field 1
+    For: AllDays,            !- Field 2
+    Until: 24:00,1.0,        !- Field 3
+    For: AllOtherDays,       !- Field 4
+    Until: 24:00,  1;        !- Field 5
 
   Schedule:Compact,
     Activity Sch,            !- Name
