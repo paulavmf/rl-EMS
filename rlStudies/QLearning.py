@@ -30,13 +30,31 @@ def createEpsilonGreedyPolicy(Q, epsilon, num_actions):
         Action_probabilities = np.ones(num_actions,
                                        dtype=float) * epsilon / num_actions
 
-        best_action = np.argmax(Q[state])
+        best_action = np.argmax(Q[state[0]])
         Action_probabilities[best_action] += (1.0 - epsilon)
         return Action_probabilities
 
     return policyFunction
 
+def inizialize_qLearning(env, num_episodes, discount_factor=1.0,
+              alpha=0.6, epsilon=0.1):
+    # Action value function
+    # A nested dictionary that maps
+    # state -> (action -> action-value).
+    Q = defaultdict(lambda: np.zeros(env.action_space.n))
 
+    # Keeps track of useful statistics
+    stats = plotting.EpisodeStats(
+        episode_lengths=np.zeros(num_episodes),
+        episode_rewards=np.zeros(num_episodes))
+
+    # Create an epsilon greedy policy function
+    # appropriately for environment action space
+    policy = createEpsilonGreedyPolicy(Q, epsilon, env.action_space.n)
+    return Q,stats, policy
+
+
+2
 def qLearning(env, num_episodes, discount_factor=1.0,
               alpha=0.6, epsilon=0.1):
     """
@@ -59,11 +77,17 @@ def qLearning(env, num_episodes, discount_factor=1.0,
     policy = createEpsilonGreedyPolicy(Q, epsilon, env.action_space.n)
 
     # For every episode
+    '''
+    qué diferencia hay entre episodio... cada episodio vuelvo a resetear el environment
+    le doy un cierto número de intentos para que intente regular el número de gente según la camntidad de calor
+    
+    '''
     for ith_episode in range(num_episodes):
 
         # Reset the environment and pick the first action
         state = env.reset()
 
+        # esto tiene que ocurrir en cada step de la simulación
         for t in itertools.count():
 
             # get probabilities of all actions from current state
@@ -76,6 +100,13 @@ def qLearning(env, num_episodes, discount_factor=1.0,
                 p=action_probabilities)
 
             # take action and get reward, transit to next state
+            # next state es el nuevo número de ocupantes que tengo que meter en
+            # energy plus a la misma vez que saco next state tengo que actualizar
+            # las condiciones en energy plus
+            '''
+            cada step calculo el reward de ese step y el próximo state resultado de la acción
+            '''
+            # next_state sería la predicción del día siguiente por ejemplo?
             next_state, reward, done, _ = env.step(action)
 
             # Update statistics
@@ -83,6 +114,9 @@ def qLearning(env, num_episodes, discount_factor=1.0,
             stats.episode_lengths[ith_episode] = t
 
             # TD Update
+            '''
+            mejor acción a tomar según la Q table
+            '''
             best_next_action = np.argmax(Q[next_state])
             td_target = reward + discount_factor * Q[next_state][best_next_action]
             td_delta = td_target - Q[state][action]
