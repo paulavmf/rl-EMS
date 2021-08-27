@@ -113,7 +113,7 @@
 
   Version,9.4;
 
-  Timestep,4;
+  Timestep,6;
 
   Building,
     Simple One Zone (Wireframe DXF),  !- Name
@@ -145,8 +145,8 @@
     1,                       !- Begin Month
     1,                      !- Begin Day of Month
     ,                        !- Begin Year
-    1,                       !- End Month
-    30,                      !- End Day of Month
+    2,                       !- End Month
+    28,                      !- End Day of Month
     ,                        !- End Year
     Tuesday,                 !- Day of Week for Start Day
     Yes,                     !- Use Weather File Holidays and Special Days
@@ -157,10 +157,10 @@
 
   RunPeriod,
     SpringSeasonDay,         !- Name
-    4,                       !- Begin Month
+    3,                       !- Begin Month
     1,                      !- Begin Day of Month
     ,                        !- Begin Year
-    4,                       !- End Month
+    5,                       !- End Month
     30,                      !- End Day of Month
     ,                        !- End Year
     Tuesday,                 !- Day of Week for Start Day
@@ -172,10 +172,10 @@
 
   RunPeriod,
     SummerSeasonDay,         !- Name
-    7,                       !- Begin Month
+    6,                       !- Begin Month
     1,                      !- Begin Day of Month
     ,                        !- Begin Year
-    7,                       !- End Month
+    8,                       !- End Month
     30,                      !- End Day of Month
     ,                        !- End Year
     Tuesday,                 !- Day of Week for Start Day
@@ -187,10 +187,10 @@
 
   RunPeriod,
     AutumnSeasonDay,         !- Name
-    10,                      !- Begin Month
+    9,                      !- Begin Month
     1,                      !- Begin Day of Month
     ,                        !- Begin Year
-    10,                      !- End Month
+    12,                      !- End Month
     30,                      !- End Day of Month
     ,                        !- End Year
     Tuesday,                 !- Day of Week for Start Day

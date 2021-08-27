@@ -5,7 +5,7 @@ from collections import namedtuple
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
-EpisodeStats = namedtuple("Stats",["episode_lengths", "episode_rewards"])
+EpisodeStats = namedtuple("Stats",["episode_lengths", "episode_rewards", "people"])
 
 def plot_cost_to_go_mountain_car(env, estimator, num_tiles=20):
     x = np.linspace(env.observation_space.low[0], env.observation_space.high[0], num=num_tiles)
@@ -70,7 +70,8 @@ def plot_episode_stats(stats, smoothing_window=10, noshow=False):
     if noshow:
         plt.close(fig1)
     else:
-        plt.show(fig1)
+        # plt.show(fig1)
+        fig1.show()
 
     # Plot the episode reward over time
     fig2 = plt.figure(figsize=(10,5))
@@ -82,7 +83,8 @@ def plot_episode_stats(stats, smoothing_window=10, noshow=False):
     if noshow:
         plt.close(fig2)
     else:
-        plt.show(fig2)
+        # plt.show(fig2)
+        fig2.show()
 
     # Plot time steps and episode number
     fig3 = plt.figure(figsize=(10,5))
@@ -93,6 +95,20 @@ def plot_episode_stats(stats, smoothing_window=10, noshow=False):
     if noshow:
         plt.close(fig3)
     else:
-        plt.show(fig3)
+        # plt.show(fig3)
+        fig3.show()
 
-    return fig1, fig2, fig3
+        # Plot the episode reward over time
+    fig4 = plt.figure(figsize=(10, 5))
+    plt.plot(np.array(stats.people))
+    plt.xlabel("steps")
+    plt.ylabel("people")
+    plt.title("people Length over Time")
+    if noshow:
+        plt.close(fig4)
+    else:
+        # plt.show(fig2)
+        fig4.show()
+
+
+    return fig1, fig2, fig3, fig4

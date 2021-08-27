@@ -47,8 +47,13 @@ class PopHeatEnv(Env):
         self.reward = 0
 
     def set_obs(self, npop, heat, temp):
-        self.state = np.array([npop + random.randint(-3, 3), heat, temp])
-        obs = (npop + random.randint(-3, 3), heat, temp)
+
+        # TODO does it make sense to aply random??
+        # self.state = np.array([npop + random.randint(-3, 3), heat, temp])
+        # obs = (npop + random.randint(-3, 3), heat, temp)
+
+        self.state = np.array([npop, heat, temp])
+        obs = (npop, heat, temp)
         return obs
 
 
@@ -65,17 +70,18 @@ class PopHeatEnv(Env):
         return self.state[0]
 
     def get_reward(self,people_heat):
-        if 10000 >= people_heat >= 11000:
-            self.reward += 1
+        if 10000 <= people_heat <= 11000:
+            self.reward = 10
+            self.n_done += 1
         else:
-            self.reward -= 1
+            self.reward = -1
 
         # Apply temperature noise
         # self.state += random.randint(-1,1)
         # Set placeholder for info
         info = {}
         done = False
-        if people_heat == 1000:
+        if self.n_done == 2 :
             done = True
 
         # Return step information
@@ -89,4 +95,5 @@ class PopHeatEnv(Env):
         # Reset shower temperature
         # Reset shower time
         self.reward = 0
+        self.n_done = 0
         return self.reward
