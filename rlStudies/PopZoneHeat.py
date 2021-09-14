@@ -51,13 +51,15 @@ class PopHeatEnv(Env):
         # TODO does it make sense to aply random??
         # self.state = np.array([npop + random.randint(-3, 3), heat, temp])
         # obs = (npop + random.randint(-3, 3), heat, temp)
-
+        # discretizo las observaciones hasta quitarles decimales
+        # TODO parece que este cambio da igual.. ahora todo funciona y no sé porqué
+        # self.state = np.array([npop, float(round(heat)), float(round(temp))])
         self.state = np.array([npop, heat, temp])
         obs = (npop, heat, temp)
         return obs
 
 
-    def step(self, action):
+    def apply_action(self, action):
         # Apply action
         # 0 -1 = -1 temperature
         # 1 -1 = 0

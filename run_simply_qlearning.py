@@ -3,7 +3,7 @@ import sys
 sys.path.insert(0, '/usr/local/EnergyPlus-9-4-0')
 import numpy
 
-from rlStudies.testing_random_decisionpy import createEpsilonGreedyPolicy
+from testing_random_decision import createEpsilonGreedyPolicy
 from pyenergyplus.api import EnergyPlusAPI
 import matplotlib.style
 import numpy as np
@@ -46,7 +46,7 @@ episode_rewards = 0
 idffile = '/home/paula/Documentos/Doctorado/Desarrollo/rl-cacharreo/Model/2ZoneDataCenterHVAC_wEconomizer.idf' # modified people wet zone at 35
 iddfile = '/usr/local/EnergyPlus-9-4-0/Energy+.idd'
 epwfile = '/home/paula/Documentos/Doctorado/Desarrollo/EPProject/input/wheather_file/FRA_Paris.Orly.071490_IWEC.epw'
-# output = '/home/paula/Documentos/Doctorado/Desarrollo/EPProject/APItesting/'
+output = '/home/paula/Documentos/Doctorado/Desarrollo/rl-cacharreo/eplusout'
 
 
 
@@ -85,8 +85,8 @@ def qLearning_handler(state):
                 Path("eplus_rl.log").touch()
             # SEGUNDO STEP: INICIALIZO ENVIRONMENT
             env = PopHeatEnv()
-            if os.path.isfile("qtable.pickle_2"):
-                myfile = open("qtable.pickle_2", 'rb')
+            if os.path.isfile("qtable.pickle_"):
+                myfile = open("qtable.pickle", 'rb')
                 qtable = pickle.load(myfile)
                 Q = defaultdict(lambda: np.zeros(env.action_space.n), qtable)
             else:
@@ -239,9 +239,9 @@ if __name__ == '__main__':
     api.exchange.request_variable(state, "Zone People Occupant Count", "West Zone")
     # trim off this python script name when calling the run_energyplus function so you end up with just
     # the E+ args, like: -d /output/dir -D /path/to/input.idf
-    for _ in range(10):
-        api.runtime.run_energyplus(state, ['-d', '/path/to/output/directory','-w', epwfile, idffile])
-        with open(f"qtable.pickle_2", "wb") as f:
+    for _ in range(1):
+        api.runtime.run_energyplus(state, ['-d', output,'-w', epwfile, idffile])
+        with open(f"qtable.pickle", "wb") as f:
             pickle.dump(dict(Q), f)
         plotting.plot_episode_stats(stats)
         api.state_manager.reset_state(state)
