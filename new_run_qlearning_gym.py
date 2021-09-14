@@ -1,6 +1,7 @@
 import os
 import sys
-from rlStudies.QLearning import createEpsilonGreedyPolicy
+sys.path.insert(0, '/usr/local/EnergyPlus-9-4-0')
+from testing_random_decision import createEpsilonGreedyPolicy
 from pyenergyplus.api import EnergyPlusAPI
 import logging
 import matplotlib.style
@@ -10,7 +11,7 @@ import helpers as plotting
 from collections import defaultdict
 from pathlib import Path
 
-sys.path.insert(0, '/usr/local/EnergyPlus-9-4-0')
+
 
 matplotlib.style.use('ggplot')
 one_time = True
@@ -35,8 +36,6 @@ action = 0
 first_step = True
 obs = tuple()
 next_obs = tuple()
-LEARNING_RATE = 0.1
-DISCOUNT = 0.95
 
 # FILES
 idffile = '/home/paula/Documentos/Doctorado/Desarrollo/rl-cacharreo/Model/2ZoneDataCenterHVAC_wEconomizer.idf' # modified people wet zone at 35
@@ -48,7 +47,7 @@ output = '/home/paula/Documentos/Doctorado/Desarrollo/EPProject/APItesting/'
 
 
 def qLearning_handler(state):
-    global one_time,people_heat_sensor,people_actuator, people_sensor, solar_sensor, alpha, epsilon, discount_factor, num_episodes, policy, env, stats, env_state, ith_episode, t, Q, first_step, count,obs, action, finish, obs, next_obs, LEARNING_RATE, DISCOUNT
+    global one_time,people_heat_sensor,people_actuator, people_sensor, solar_sensor, alpha, epsilon, discount_factor, num_episodes, policy, env, stats, env_state, ith_episode, t, Q, first_step, count,obs, action, finish, obs, next_obs
     sys.stdout.flush()
 
     count += 1
@@ -76,9 +75,9 @@ def qLearning_handler(state):
             following an epsilon-greedy policy
             """
             try:
-                os.remove("/home/paula/Documentos/Doctorado/Desarrollo/rl-cacharreo/eplus_rl.log")
+                os.remove("/eplus_rl.log")
             finally:
-                Path("/home/paula/Documentos/Doctorado/Desarrollo/rl-cacharreo/eplus_rl.log").touch()
+                Path("/eplus_rl.log").touch()
             # SEGUNDO STEP: INICIALIZO ENVIRONMENT
             env = PopHeatEnv()
             Q = defaultdict(lambda: np.zeros(env.action_space.n))
@@ -136,11 +135,9 @@ def qLearning_handler(state):
 
             # choose action according to
             # the probability distribution
-            if np.random.random() > epsilon:  # EXPLOIT
-                action = np.argmax(Q[obs])
-            else:  # EXPLORE
-                action = np.random.randint(0, 3)
-                # elige una acción randomly
+            action = np.random.choice(np.arange(
+                len(action_probabilities)),
+                p=action_probabilities)
 
             log += f"action choosed: {action} \n"
 
@@ -150,7 +147,7 @@ def qLearning_handler(state):
 
             log += f"new number of people in next state {new_people}"
 
-            file = open('eplus_rl.log', 'a')
+            file = open('rlStudies/eplus_rl.log', 'a')
             file.write(log)
             file.close()
 
@@ -171,7 +168,7 @@ def qLearning_handler(state):
 
             if done or (hour == 0 and minute == 60):
                 first_step = True
-                file = open('eplus_rl.log', 'a')
+                file = open('rlStudies/eplus_rl.log', 'a')
                 file.write(log)
                 file.close()
             else:
@@ -182,24 +179,19 @@ def qLearning_handler(state):
                 log += f"***END ITERATION {t}\n"
 
                 # TD Update
-                current_q = Q[obs][action]
-                max_future_q = np.max(Q[next_obs])
-                if reward == -1:
-                    new_Q = reward
-                else:
-                    new_Q = (1 - LEARNING_RATE) * current_q + LEARNING_RATE * (reward + DISCOUNT * max_future_q)
-                Q[obs][action] = new_Q
+                best_next_action = np.argmax(Q[next_obs])
+                td_target = reward + discount_factor * Q[next_obs][best_next_action]
+                td_delta = td_target - Q[obs][action]
+                Q[obs][action] += alpha * td_delta
 
                 obs = next_obs
                 action_probabilities = policy(obs)
 
                 # choose action according to
                 # the probability distribution
-                if np.random.random() > epsilon:  # EXPLOIT
-                    action = np.argmax(Q[obs])
-                else:  # EXPLORE
-                    action = np.random.randint(0, 3)
-                    # elige una acción randomly
+                action = np.random.choice(np.arange(
+                    len(action_probabilities)),
+                    p=action_probabilities)
 
                 new_people = env.apply_action(action)
 
@@ -209,7 +201,7 @@ def qLearning_handler(state):
                        f"at {day}/{month} hour:{hour} minute:{minute}\n" \
                        f"action taked {action}\n "
 
-                file = open('eplus_rl.log', 'a')
+                file = open('rlStudies/eplus_rl.log', 'a')
                 file.write(log)
                 file.close()
 
@@ -229,9 +221,9 @@ if __name__ == '__main__':
     api.exchange.request_variable(state, "Zone People Occupant Count", "West Zone")
     # trim off this python script name when calling the run_energyplus function so you end up with just
     # the E+ args, like: -d /output/dir -D /path/to/input.idf
-
     api.runtime.run_energyplus(state, ['-w', epwfile, idffile])
-
+    # If you need to call run_energyplus again, then reset the state first
+    api.state_manager.reset_state(state)
     plotting.plot_episode_stats(stats)
 
 

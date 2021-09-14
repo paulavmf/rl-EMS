@@ -1,16 +1,20 @@
 import os
 import sys
-from rlStudies.QLearning import createEpsilonGreedyPolicy
+sys.path.insert(0, '/usr/local/EnergyPlus-9-4-0')
+import numpy
+
+from rlStudies.testing_random_decisionpy import createEpsilonGreedyPolicy
 from pyenergyplus.api import EnergyPlusAPI
-import logging
 import matplotlib.style
 import numpy as np
 from rlStudies.PopZoneHeat import PopHeatEnv
 import helpers as plotting
 from collections import defaultdict
 from pathlib import Path
+import pickle
+from gym import spaces
 
-sys.path.insert(0, '/usr/local/EnergyPlus-9-4-0')
+
 
 matplotlib.style.use('ggplot')
 one_time = True
@@ -33,20 +37,22 @@ count = 0
 obs = tuple()
 action = 0
 first_step = True
-obs = tuple()
 next_obs = tuple()
+LEARNING_RATE = 0.1
+DISCOUNT = 0.95
+episode_rewards = 0
 
 # FILES
 idffile = '/home/paula/Documentos/Doctorado/Desarrollo/rl-cacharreo/Model/2ZoneDataCenterHVAC_wEconomizer.idf' # modified people wet zone at 35
 iddfile = '/usr/local/EnergyPlus-9-4-0/Energy+.idd'
 epwfile = '/home/paula/Documentos/Doctorado/Desarrollo/EPProject/input/wheather_file/FRA_Paris.Orly.071490_IWEC.epw'
-output = '/home/paula/Documentos/Doctorado/Desarrollo/EPProject/APItesting/'
+# output = '/home/paula/Documentos/Doctorado/Desarrollo/EPProject/APItesting/'
 
 
 
 
 def qLearning_handler(state):
-    global one_time,people_heat_sensor,people_actuator, people_sensor, solar_sensor, alpha, epsilon, discount_factor, num_episodes, policy, env, stats, env_state, ith_episode, t, Q, first_step, count,obs, action, finish, obs, next_obs
+    global one_time,people_heat_sensor,people_actuator, people_sensor, solar_sensor, alpha, epsilon, discount_factor, num_episodes, policy, env, stats, env_state, ith_episode, t, Q, first_step, count,obs, action, finish, obs, next_obs, LEARNING_RATE, DISCOUNT, episode_rewards
     sys.stdout.flush()
 
     count += 1
@@ -74,17 +80,24 @@ def qLearning_handler(state):
             following an epsilon-greedy policy
             """
             try:
-                os.remove("/home/paula/Documentos/Doctorado/Desarrollo/rl-cacharreo/eplus_rl.log")
+                os.remove("eplus_rl.log")
             finally:
-                Path("/home/paula/Documentos/Doctorado/Desarrollo/rl-cacharreo/eplus_rl.log").touch()
+                Path("eplus_rl.log").touch()
             # SEGUNDO STEP: INICIALIZO ENVIRONMENT
             env = PopHeatEnv()
-            Q = defaultdict(lambda: np.zeros(env.action_space.n))
-
+            if os.path.isfile("qtable.pickle_2"):
+                myfile = open("qtable.pickle_2", 'rb')
+                qtable = pickle.load(myfile)
+                Q = defaultdict(lambda: np.zeros(env.action_space.n), qtable)
+            else:
+                # no me queda claro de estar haciendo bien esto
+                # Q = np.zeros((env.observation_space.shape[0], env.action_space.n))
+                Q = defaultdict(lambda: np.zeros(env.action_space.n))
+            episode_rewards = 0
             # Keeps track of useful statistics
             stats = plotting.EpisodeStats(
-                episode_lengths=np.zeros(num_episodes),
-                episode_rewards=np.zeros(num_episodes),
+                episode_lengths=list(),
+                episode_rewards=list(),
                 people = list(),
             )
 
@@ -107,8 +120,9 @@ def qLearning_handler(state):
         # runned only first step, when a day finished or when done condition is true
         if first_step == True:
             # ¢ount of steps every episode
-            stats.episode_lengths[ith_episode] = t
+            stats.episode_lengths.append(t)
             t = 0
+            episode_rewards = 0
             ith_episode += 1
             # just reset reward to 0 and reset actuator
             env.reset()
@@ -130,19 +144,19 @@ def qLearning_handler(state):
             obs = env.set_obs(people, people_heat, solar)
 
             # Selección de la acción
-            action_probabilities = policy(obs)
+            # action_probabilities = policy(obs)
 
             # choose action according to
             # the probability distribution
-            action = np.random.choice(np.arange(
-                len(action_probabilities)),
-                p=action_probabilities)
+            if np.random.random() > epsilon:  # EXPLOIT
+                action = np.argmax(Q[obs])
+            else:  # EXPLORE
+                action = np.random.randint(0, 3)
+                # elige una acción randomly
 
             log += f"action choosed: {action} \n"
 
             new_people = env.apply_action(action)
-
-            api.exchange.set_actuator_value(state, people_actuator, new_people)
 
             log += f"new number of people in next state {new_people}"
 
@@ -162,7 +176,8 @@ def qLearning_handler(state):
 
             # Update statistics
             t += 1
-            stats.episode_rewards[ith_episode] += reward
+            episode_rewards += reward
+            stats.episode_rewards.append(reward)
 
 
             if done or (hour == 0 and minute == 60):
@@ -178,19 +193,24 @@ def qLearning_handler(state):
                 log += f"***END ITERATION {t}\n"
 
                 # TD Update
-                best_next_action = np.argmax(Q[next_obs])
-                td_target = reward + discount_factor * Q[next_obs][best_next_action]
-                td_delta = td_target - Q[obs][action]
-                Q[obs][action] += alpha * td_delta
+                current_q = Q[obs][action]
+                max_future_q = np.max(Q[next_obs])
+                if reward == -1:
+                    new_Q = reward
+                else:
+                    new_Q = (1 - LEARNING_RATE) * current_q + LEARNING_RATE * (reward + DISCOUNT * max_future_q)
+                Q[obs][action] = new_Q
 
                 obs = next_obs
                 action_probabilities = policy(obs)
 
                 # choose action according to
                 # the probability distribution
-                action = np.random.choice(np.arange(
-                    len(action_probabilities)),
-                    p=action_probabilities)
+                if np.random.random() > epsilon:  # EXPLOIT
+                    action = np.argmax(Q[obs])
+                else:  # EXPLORE
+                    action = np.random.randint(0, 3)
+                    # elige una acción randomly
 
                 new_people = env.apply_action(action)
 
@@ -213,15 +233,18 @@ if __name__ == '__main__':
     api = EnergyPlusAPI()
     state = api.state_manager.new_state()
     print("this is called only once")
-
     api.runtime.callback_end_zone_timestep_after_zone_reporting(state, qLearning_handler)
     api.exchange.request_variable(state, "Site Direct Solar Radiation Rate per Area", "ENVIRONMENT")
     api.exchange.request_variable(state, "Zone People Total Heating Rate", "West Zone")
     api.exchange.request_variable(state, "Zone People Occupant Count", "West Zone")
     # trim off this python script name when calling the run_energyplus function so you end up with just
     # the E+ args, like: -d /output/dir -D /path/to/input.idf
-    api.runtime.run_energyplus(state, ['-w', epwfile, idffile])
-    plotting.plot_episode_stats(stats)
+    for _ in range(10):
+        api.runtime.run_energyplus(state, ['-d', '/path/to/output/directory','-w', epwfile, idffile])
+        with open(f"qtable.pickle_2", "wb") as f:
+            pickle.dump(dict(Q), f)
+        plotting.plot_episode_stats(stats)
+        api.state_manager.reset_state(state)
 
 
 

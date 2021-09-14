@@ -1,7 +1,7 @@
 import sys
 sys.path.insert(0, '/usr/local/EnergyPlus-9-4-0')
 from pyenergyplus.api import EnergyPlusAPI
-from dummy_transformation import  set_new_temp
+# from dummy_transformation import  set_new_temp
 
 one_time = True
 outdoor_temp_sensor = 0

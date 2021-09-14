@@ -4,7 +4,7 @@ import matplotlib
 import matplotlib.style
 import numpy as np
 import pandas as pd
-from rlStudies.simplerl import PopZoneEnv
+from rlStudies.testing_dummy_env import PopZoneEnv
 import helpers as plotting
 
 

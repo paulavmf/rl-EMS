@@ -4,7 +4,7 @@ import sys
 sys.path.insert(0, '/usr/local/EnergyPlus-9-4-0')
 from pyenergyplus.api import EnergyPlusAPI
 from dummy_transformation import  set_people, simple_decision_people
-from rlStudies.simplerl import applay_random_action
+from rlStudies.testing_dummy_env import applay_random_action
 
 one_time = True
 solar_sensor = 0
@@ -135,6 +135,7 @@ if __name__ == '__main__':
     # api.exchange.request_variable(state, "Wind Speed", "ENVIRONMENT")
     api.exchange.request_variable(state, "Site Direct Solar Radiation Rate per Area", "ENVIRONMENT")
     api.exchange.request_variable(state, "Zone People Occupant Count", "West Zone")
+    api.exchange.request_variable(state, "Zone People Total Heating Rate", "West Zone")
     # trim off this python script name when calling the run_energyplus function so you end up with just
     # the E+ args, like: -d /output/dir -D /path/to/input.idf
     api.runtime.run_energyplus(state, ['-w', epwfile, idffile])
