@@ -75,7 +75,7 @@ def plot_episode_stats(stats, smoothing_window=10, noshow=False):
 
     # Plot the episode reward over time
     fig2 = plt.figure(figsize=(10,5))
-    rewards_smoothed = pd.Series(stats.episode_rewards).rolling(smoothing_window, min_periods=smoothing_window).mean()
+    rewards_smoothed = pd.Series(np.array(stats.episode_rewards)).rolling(smoothing_window, min_periods=smoothing_window).mean()
     plt.plot(rewards_smoothed)
     plt.xlabel("Episode")
     plt.ylabel("Episode Reward (Smoothed)")
@@ -88,7 +88,7 @@ def plot_episode_stats(stats, smoothing_window=10, noshow=False):
 
     # Plot time steps and episode number
     fig3 = plt.figure(figsize=(10,5))
-    plt.plot(np.cumsum(stats.episode_lengths), np.arange(len(stats.episode_lengths)))
+    plt.plot(np.cumsum(np.array(stats.episode_lengths)), np.arange(len(stats.episode_lengths)))
     plt.xlabel("Time Steps")
     plt.ylabel("Episode")
     plt.title("Episode per time step")
