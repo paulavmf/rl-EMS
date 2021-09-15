@@ -48,7 +48,16 @@ iddfile = '/usr/local/EnergyPlus-9-4-0/Energy+.idd'
 epwfile = '/home/paula/Documentos/Doctorado/Desarrollo/EPProject/input/wheather_file/FRA_Paris.Orly.071490_IWEC.epw'
 output = '/home/paula/Documentos/Doctorado/Desarrollo/rl-cacharreo/eplusout'
 
+sensors = \
+    [{"variable_name" : u"Site Direct Solar Radiation Rate per Area","variable_key":u"ENVIRONMENT","name": "solar_sensor"},
+     {"variable_name": "Zone People Occupant Count","variable_key": "West Zone", "name": "people_sensor" },
+    {"variable_name": "Zone People Total Heating Rate","variable_key": "West Zone", "name": "people_heat_sensor" }
+           ]
 
+actuators =[{"component_type":"People",
+             "control_type": "Number of People",
+             "actuator_key":"WEST ZONE PEOPLE",
+             "name":"people_actuator" }]
 
 
 def qLearning_handler(state):
@@ -59,6 +68,18 @@ def qLearning_handler(state):
     # print(f"simulation number = {count}")
     if api.exchange.api_data_fully_ready(state):
         if one_time:
+            # todo estas variables son globales
+            """for sensor in sensors:
+                exec("%s = api.exchange.get_variable_handle(state, u'%s', u'%s')" % (sensor["name"],
+                                                                                sensor["variable_name"],
+                                                                                sensor["variable_key"]))
+
+            for actuator in actuators:
+                exec("%s = api.exchange.get_actuator_handle(state, '%s', u'%s', u'%s')" % (actuator["name"],
+                                                                                   actuator["component_type"],
+                                                                                   actuator["control_type"],
+                                                                                   actuator["actuator_key"]))"""
+
             solar_sensor = api.exchange.get_variable_handle(
                 state, u"Site Direct Solar Radiation Rate per Area", u"ENVIRONMENT"
             )
@@ -85,8 +106,8 @@ def qLearning_handler(state):
                 Path("eplus_rl.log").touch()
             # SEGUNDO STEP: INICIALIZO ENVIRONMENT
             env = PopHeatEnv()
-            if os.path.isfile("qtable.pickle_"):
-                myfile = open("qtable.pickle", 'rb')
+            if os.path.isfile("/home/paula/Documentos/Doctorado/Desarrollo/rl-cacharreo/qtable.pickle_"):
+                myfile = open("/home/paula/Documentos/Doctorado/Desarrollo/rl-cacharreo/qtable.pickle", 'rb')
                 qtable = pickle.load(myfile)
                 Q = defaultdict(lambda: np.zeros(env.action_space.n), qtable)
             else:
@@ -99,6 +120,7 @@ def qLearning_handler(state):
                 episode_lengths=list(),
                 episode_rewards=list(),
                 people = list(),
+                peopleheat=list()
             )
 
             # Create an epsilon greedy policy function
@@ -116,6 +138,7 @@ def qLearning_handler(state):
         people_heat = api.exchange.get_variable_value(state, people_heat_sensor)
         people = api.exchange.get_variable_value(state, people_sensor)
         stats.people.append(people)
+        stats.peopleheat.append(people_heat)
         solar = api.exchange.get_variable_value(state, solar_sensor)
         # runned only first step, when a day finished or when done condition is true
         if first_step == True:
@@ -230,21 +253,40 @@ def qLearning_handler(state):
 
 
 if __name__ == '__main__':
+    final_stats = plotting.EpisodeStats(
+        episode_lengths=list(),
+        episode_rewards=list(),
+        people=list(),
+        peopleheat=list()
+    )
     api = EnergyPlusAPI()
-    state = api.state_manager.new_state()
-    print("this is called only once")
-    api.runtime.callback_end_zone_timestep_after_zone_reporting(state, qLearning_handler)
-    api.exchange.request_variable(state, "Site Direct Solar Radiation Rate per Area", "ENVIRONMENT")
-    api.exchange.request_variable(state, "Zone People Total Heating Rate", "West Zone")
-    api.exchange.request_variable(state, "Zone People Occupant Count", "West Zone")
-    # trim off this python script name when calling the run_energyplus function so you end up with just
-    # the E+ args, like: -d /output/dir -D /path/to/input.idf
     for _ in range(1):
+        state = api.state_manager.new_state()
+        print("this is called only once")
+        api.runtime.callback_end_zone_timestep_after_zone_reporting(state, qLearning_handler)
+        api.exchange.request_variable(state, "Site Direct Solar Radiation Rate per Area", "ENVIRONMENT")
+        api.exchange.request_variable(state, "Zone People Total Heating Rate", "West Zone")
+        api.exchange.request_variable(state, "Zone People Occupant Count", "West Zone")
+        # trim off this python script name when calling the run_energyplus function so you end up with just
+        # the E+ args, like: -d /output/dir -D /path/to/input.idf
+
         api.runtime.run_energyplus(state, ['-d', output,'-w', epwfile, idffile])
-        with open(f"qtable.pickle", "wb") as f:
+        with open(f"/home/paula/Documentos/Doctorado/Desarrollo/rl-cacharreo/qtable_no_rwd.pickle", "wb") as f:
             pickle.dump(dict(Q), f)
-        plotting.plot_episode_stats(stats)
+        final_stats.episode_lengths.extend(stats.episode_lengths)
+        final_stats.episode_rewards.extend(stats.episode_rewards)
+        final_stats.people.extend(stats.people)
+        final_stats.peopleheat.extend(stats.peopleheat)
         api.state_manager.reset_state(state)
+        one_time = True
+        first_step = True
+
+    # añadí esto para borrar las variables globales.
+    # realmente no sé si hace alguna diferencia
+    plotting.plot_episode_stats(final_stats)
+    for name in dir():
+        if not name.startswith('_'):
+            del globals()[name]
 
 
 
