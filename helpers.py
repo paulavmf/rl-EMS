@@ -5,7 +5,7 @@ from collections import namedtuple
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
-EpisodeStats = namedtuple("Stats",["episode_lengths", "episode_rewards", "people"])
+EpisodeStats = namedtuple("Stats",["episode_lengths", "episode_rewards", "people", "peopleheat"])
 
 def plot_cost_to_go_mountain_car(env, estimator, num_tiles=20):
     x = np.linspace(env.observation_space.low[0], env.observation_space.high[0], num=num_tiles)
@@ -60,7 +60,7 @@ def plot_value_function(V, title="Value Function"):
 
 
 
-def plot_episode_stats(stats, smoothing_window=10, noshow=False):
+def plot_episode_stats(stats, smoothing_window=500, noshow=False):
     # Plot the episode length over time
     fig1 = plt.figure(figsize=(10,5))
     plt.plot(stats.episode_lengths)
@@ -101,14 +101,31 @@ def plot_episode_stats(stats, smoothing_window=10, noshow=False):
         # Plot the episode reward over time
     fig4 = plt.figure(figsize=(10, 5))
     plt.plot(np.array(stats.people))
+    people_smoothed = pd.Series(np.array(stats.people)).rolling(smoothing_window,
+                                                                          min_periods=smoothing_window).mean()
+    plt.plot(people_smoothed)
     plt.xlabel("steps")
     plt.ylabel("people")
-    plt.title("people Length over Time")
+    plt.title("people Length over Time (Smoothed over window size {})".format(smoothing_window))
     if noshow:
         plt.close(fig4)
     else:
         # plt.show(fig2)
         fig4.show()
 
+    fig5 = plt.figure(figsize=(10, 5))
+    plt.plot(np.array(stats.peopleheat))
+    peopleheat_smoothed = pd.Series(np.array(stats.peopleheat)).rolling(smoothing_window,
+                                                                min_periods=smoothing_window).mean()
+    plt.plot(peopleheat_smoothed)
+    plt.xlabel("steps")
+    plt.ylabel("people heat (Smoothed over window size {})".format(smoothing_window))
+    plt.title("people heat over Time")
+    if noshow:
+        plt.close(fig5)
+    else:
+        # plt.show(fig2)
+        fig5.show()
 
-    return fig1, fig2, fig3, fig4
+
+    return fig1, fig2, fig3, fig4, fig5
