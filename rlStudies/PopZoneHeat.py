@@ -2,6 +2,14 @@ from gym import Env
 from gym.spaces import Discrete, Box
 import random
 import numpy as np
+import decimal
+
+
+def discretize(obs):
+    c = decimal.Decimal(obs)
+    return float(round(c, 0))
+
+
 
 
 class PopHeatEnv(Env):
@@ -48,13 +56,11 @@ class PopHeatEnv(Env):
 
     def set_obs(self, npop, heat, temp):
 
-        # TODO does it make sense to aply random??
-        # self.state = np.array([npop + random.randint(-3, 3), heat, temp])
-        # obs = (npop + random.randint(-3, 3), heat, temp)
         # discretizo las observaciones hasta quitarles decimales
         # TODO parece que este cambio da igual.. ahora todo funciona y no sé porqué
+        # TODO culpa del cache? culpa de las variables globales?
         # self.state = np.array([npop, float(round(heat)), float(round(temp))])
-        self.state = np.array([npop, heat, temp])
+        self.state = np.array([discretize(npop), discretize(heat), discretize(temp)])
         obs = (npop, heat, temp)
         return obs
 
@@ -73,12 +79,12 @@ class PopHeatEnv(Env):
 
     def get_reward(self,people_heat):
         if 10000 <= people_heat <= 12000:
-            self.reward = -1
-            self.n_done += 1
+            self.reward = 50
+            self.n_done += 0
         elif people_heat < 0:
-            self.reward = -1000
+            self.reward = -100
         else:
-            self.reward = 100
+            self.reward = -1
 
 
         # Apply temperature noise
@@ -86,7 +92,7 @@ class PopHeatEnv(Env):
         # Set placeholder for info
         info = {}
         done = False
-        if self.n_done == 5 :
+        if self.n_done == 5:
             done = True
 
         # Return step information
