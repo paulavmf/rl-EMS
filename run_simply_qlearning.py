@@ -1,27 +1,29 @@
+"""
+
+"""
+
+
+
 import os
 import sys
 sys.path.insert(0, '/usr/local/EnergyPlus-9-4-0')
-import numpy
 
 from testing_random_decision import createEpsilonGreedyPolicy
 from pyenergyplus.api import EnergyPlusAPI
 import matplotlib.style
 import numpy as np
-from rlStudies.PopZoneHeat import PopHeatEnv
+from environments.PopZoneHeat import PopHeatEnv
 import helpers as plotting
 from collections import defaultdict
 from pathlib import Path
 import pickle
-from gym import spaces
-
-
 
 matplotlib.style.use('ggplot')
 one_time = True
-people_heat_sensor = 0
-people_actuator = 0
-people_sensor = 0
-solar_sensor = 0
+# people_heat_sensor = 0
+# people_actuator = 0
+# people_sensor = 0
+# solar_sensor = 0
 alpha=0.6
 epsilon=0.1
 discount_factor=1.0
@@ -59,9 +61,8 @@ actuators =[{"component_type":"People",
              "actuator_key":"WEST ZONE PEOPLE",
              "name":"people_actuator" }]
 
-
 def qLearning_handler(state):
-    global one_time,people_heat_sensor,people_actuator, people_sensor, solar_sensor, alpha, epsilon, discount_factor, num_episodes, policy, env, stats, env_state, ith_episode, t, Q, first_step, count,obs, action, finish, obs, next_obs, LEARNING_RATE, DISCOUNT, episode_rewards
+    global one_time, alpha, epsilon, discount_factor, num_episodes, policy, env, stats, env_state, ith_episode, t, Q, first_step, count,obs, action, finish, obs, next_obs, LEARNING_RATE, DISCOUNT, episode_rewards
     sys.stdout.flush()
 
     count += 1
@@ -69,29 +70,38 @@ def qLearning_handler(state):
     if api.exchange.api_data_fully_ready(state):
         if one_time:
             # todo estas variables son globales
-            """for sensor in sensors:
-                exec("%s = api.exchange.get_variable_handle(state, u'%s', u'%s')" % (sensor["name"],
-                                                                                sensor["variable_name"],
-                                                                                sensor["variable_key"]))
+            for sensor in sensors:
+                globals()[sensor["name"]] = api.exchange.get_variable_handle(state,
+                                                                             sensor["variable_name"],
+                                                                             sensor["variable_key"]
+            )
+                # exec("%s = api.exchange.get_variable_handle(state, u'%s', u'%s')" % (sensor["name"],
+                #                                                                 sensor["variable_name"],
+                #                                                                 sensor["variable_key"]))
 
             for actuator in actuators:
+                globals()[actuator["name"]] = api.exchange.get_actuator_handle(state,
+                                                                               actuator["component_type"],
+                                                                               actuator["control_type"],
+                                                                               actuator["actuator_key"]
+            )
                 exec("%s = api.exchange.get_actuator_handle(state, '%s', u'%s', u'%s')" % (actuator["name"],
                                                                                    actuator["component_type"],
                                                                                    actuator["control_type"],
-                                                                                   actuator["actuator_key"]))"""
+                                                                                   actuator["actuator_key"]))
 
-            solar_sensor = api.exchange.get_variable_handle(
-                state, u"Site Direct Solar Radiation Rate per Area", u"ENVIRONMENT"
-            )
-            people_actuator = api.exchange.get_actuator_handle(
-                state, "People", "Number of People", "WEST ZONE PEOPLE"
-            )
-            people_sensor = api.exchange.get_variable_handle(
-                state, "Zone People Occupant Count", "West Zone")
-
-            people_heat_sensor = api.exchange.get_variable_handle(
-                state, "Zone People Total Heating Rate", "West Zone"
-            )
+            # solar_sensor = api.exchange.get_variable_handle(
+            #     state, u"Site Direct Solar Radiation Rate per Area", u"ENVIRONMENT"
+            # )
+            # people_actuator = api.exchange.get_actuator_handle(
+            #     state, "People", "Number of People", "WEST ZONE PEOPLE"
+            # )
+            # people_sensor = api.exchange.get_variable_handle(
+            #     state, "Zone People Occupant Count", "West Zone")
+            #
+            # people_heat_sensor = api.exchange.get_variable_handle(
+            #     state, "Zone People Total Heating Rate", "West Zone"
+            # )
 
             """
             inicializo mi environment:
@@ -106,8 +116,8 @@ def qLearning_handler(state):
                 Path("eplus_rl.log").touch()
             # SEGUNDO STEP: INICIALIZO ENVIRONMENT
             env = PopHeatEnv()
-            if os.path.isfile("/home/paula/Documentos/Doctorado/Desarrollo/rl-cacharreo/qtable.pickle_"):
-                myfile = open("/home/paula/Documentos/Doctorado/Desarrollo/rl-cacharreo/qtable.pickle", 'rb')
+            if os.path.isfile("/qtable_5rep__.pickle"):
+                myfile = open("/qtable_5rep.pickle", 'rb')
                 qtable = pickle.load(myfile)
                 Q = defaultdict(lambda: np.zeros(env.action_space.n), qtable)
             else:
@@ -180,6 +190,7 @@ def qLearning_handler(state):
             log += f"action choosed: {action} \n"
 
             new_people = env.apply_action(action)
+            # api.exchange.set_actuator_value(state, people_actuator, new_people)
 
             log += f"new number of people in next state {new_people}"
 

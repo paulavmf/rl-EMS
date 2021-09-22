@@ -5,6 +5,9 @@ import numpy as np
 import decimal
 
 
+
+
+
 def discretize(obs):
     c = decimal.Decimal(obs)
     return float(round(c, 0))
@@ -78,9 +81,9 @@ class PopHeatEnv(Env):
         return self.state[0]
 
     def get_reward(self,people_heat):
-        if 10000 <= people_heat <= 12000:
+        if 10000 <= people_heat <= 10500:
             self.reward = 50
-            self.n_done += 0
+            self.n_done += 1
         elif people_heat < 0:
             self.reward = -100
         else:
