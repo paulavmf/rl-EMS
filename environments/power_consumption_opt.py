@@ -66,6 +66,7 @@ class Power_Consumption_Op(Env):
         self.observation_space = Box(low=np.array([-20,0,0]), high=np.array([50,1_000_000,1_000_000]), dtype=np.float32)
         self.reward = 0
         self.done = 0
+        self.EpisodeStats = namedtuple("Stats", ["episode_lengths", "episode_rewards", "power_consumption", "Temperature"])
 
     def _discretize(self,obs):
         c = decimal.Decimal(obs)
@@ -77,6 +78,21 @@ class Power_Consumption_Op(Env):
         :return:
         '''
         pass
+
+    def init_stats(self):
+        # Keeps track of useful statistics
+        stats = self.EpisodeStats(
+            episode_lengths=list(),
+            episode_rewards=list(),
+            power_consumption=list(),
+            Temperature=list()
+        )
+        return stats
+
+    def update_stats(self,stats,observation_dict):
+        stats.Temperature.append(observation_dict["WestZoneTemp"])
+        stats.power_consumption.append(observation_dict["Whole_Building_Power"])
+        return stats
 
     def set_obs(self, obs_dictionary):
         # WestZoneTemp, IT_Equip_Power, Whole_Building_Power
@@ -136,10 +152,9 @@ class Power_Consumption_Op(Env):
         self.n_done = 0
         return self.reward
 
-
 def plot_power_opt_stats(stats, smoothing_window=500, noshow=False):
     # Plot the episode length over time
-    fig1 = plt.figure(figsize=(10,5))
+    fig1 = plt.figure(figsize=(10, 5))
     plt.plot(stats.episode_lengths)
     plt.xlabel("Episode")
     plt.ylabel("Episode Length")
@@ -151,8 +166,9 @@ def plot_power_opt_stats(stats, smoothing_window=500, noshow=False):
         fig1.show()
 
     # Plot the episode reward over time
-    fig2 = plt.figure(figsize=(10,5))
-    rewards_smoothed = pd.Series(np.array(stats.episode_rewards)).rolling(smoothing_window, min_periods=smoothing_window).mean()
+    fig2 = plt.figure(figsize=(10, 5))
+    rewards_smoothed = pd.Series(np.array(stats.episode_rewards)).rolling(smoothing_window,
+                                                                          min_periods=smoothing_window).mean()
     plt.plot(rewards_smoothed)
     plt.xlabel("Episode")
     plt.ylabel("Episode Reward (Smoothed)")
@@ -164,7 +180,7 @@ def plot_power_opt_stats(stats, smoothing_window=500, noshow=False):
         fig2.show()
 
     # Plot time steps and episode number
-    fig3 = plt.figure(figsize=(10,5))
+    fig3 = plt.figure(figsize=(10, 5))
     plt.plot(np.cumsum(np.array(stats.episode_lengths)), np.arange(len(stats.episode_lengths)))
     plt.xlabel("Time Steps")
     plt.ylabel("Episode")
@@ -179,7 +195,7 @@ def plot_power_opt_stats(stats, smoothing_window=500, noshow=False):
     fig4 = plt.figure(figsize=(10, 5))
     plt.plot(np.array(stats.power_consumption))
     people_smoothed = pd.Series(np.array(stats.power_consumption)).rolling(smoothing_window,
-                                                                          min_periods=smoothing_window).mean()
+                                                                           min_periods=smoothing_window).mean()
     plt.plot(people_smoothed)
     plt.xlabel("steps")
     plt.ylabel("power_consumption")
@@ -193,7 +209,7 @@ def plot_power_opt_stats(stats, smoothing_window=500, noshow=False):
     fig5 = plt.figure(figsize=(10, 5))
     plt.plot(np.array(stats.Temperature))
     peopleheat_smoothed = pd.Series(np.array(stats.Temperature)).rolling(smoothing_window,
-                                                                min_periods=smoothing_window).mean()
+                                                                         min_periods=smoothing_window).mean()
     plt.plot(peopleheat_smoothed)
     plt.xlabel("steps")
     plt.ylabel("Temperature (Smoothed over window size {})".format(smoothing_window))
@@ -204,5 +220,6 @@ def plot_power_opt_stats(stats, smoothing_window=500, noshow=False):
         # plt.show(fig2)
         fig5.show()
 
-
     return fig1, fig2, fig3, fig4, fig5
+
+

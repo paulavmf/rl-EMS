@@ -10,11 +10,17 @@ from collections import namedtuple
 from matplotlib import pyplot as plt
 
 
-def discretize(obs):
-    c = decimal.Decimal(obs)
-    return float(round(c, 0))
 
+sensors = \
+    [{"variable_name" : u"Site Direct Solar Radiation Rate per Area","variable_key":u"ENVIRONMENT","name": "solar_sensor"},
+     {"variable_name": "Zone People Occupant Count","variable_key": "West Zone", "name": "people_sensor" },
+    {"variable_name": "Zone People Total Heating Rate","variable_key": "West Zone", "name": "people_heat_sensor" }
+           ]
 
+actuators =[{"component_type":"People",
+             "control_type": "Number of People",
+             "actuator_key":"WEST ZONE PEOPLE",
+             "name":"people_actuator" }]
 
 
 class PopHeatEnv(Env):
@@ -58,36 +64,65 @@ class PopHeatEnv(Env):
         # mis observaciones tienen dos domensiones y aquí establezco máximo y mimnimo
         self.observation_space = Box(low=np.array([0,0,0]), high=np.array([100,15000,1000]), dtype=np.float32)
         self.reward = 0
+        self.EpisodeStats = namedtuple("Stats", ["episode_lengths", "episode_rewards", "people_sensor", "people_heat_sensor"])
 
-    def set_obs(self, npop, heat, temp):
+
+    def _discretize(self, obs):
+        c = decimal.Decimal(obs)
+        return float(round(c, 0))
+
+    def init_stats(self):
+        # Keeps track of useful statistics
+        stats = self.EpisodeStats(
+            episode_lengths=list(),
+            episode_rewards=list(),
+            people_sensor=list(),
+            people_heat_sensor=list()
+        )
+        return stats
+
+    def update_stats(self, stats,observation_dict):
+        stats.people_sensor.append(observation_dict["people_sensor"])
+        stats.people_heat_sensor.append(observation_dict["people_heat_sensor"])
+        return stats
+
+    def update_simulation_stats(self,simulation_stats, stats):
+        simulation_stats.episode_lengths.extend(stats.episode_lengths)
+        simulation_stats.episode_rewards.extend(stats.episode_rewards)
+        simulation_stats.people_sensor.append(stats.people_sensor)
+        simulation_stats.people_heat_sensor.append(stats.people_heat_sensor)
+
+    def set_obs(self, obs_dictionary):
 
         # discretizo las observaciones hasta quitarles decimales
         # TODO parece que este cambio da igual.. ahora todo funciona y no sé porqué
         # TODO culpa del cache? culpa de las variables globales?
         # self.state = np.array([npop, float(round(heat)), float(round(temp))])
-        self.state = np.array([discretize(npop), discretize(heat), discretize(temp)])
-        obs = (npop, heat, temp)
+        obs_discrete = [self._discretize(obs) for k, obs in obs_dictionary.items()]
+        self.state = np.array(obs_discrete)
+        obs = tuple(obs_discrete)
         return obs
 
 
-    def apply_action(self, action):
+    def apply_action(self, observation, action):
         # Apply action
         # 0 -1 = -1 temperature
         # 1 -1 = 0
         # 2 -1 = 1 temperature
-        self.state[0] = self.state[0] + action - 1 # el nuevo state es el resultado de la acción
-        # Reduce people number length by 1 second
 
+        new_value = observation["people_sensor"] + action - 1  # el nuevo state es el resultado de la acción
+        # Reduce people number length by 1 second
         # Calculate reward
         # condición dependiente del calor desprendido, por ejemplo
-        return self.state[0]
+        return new_value
 
-    def get_reward(self,people_heat):
-        if 10000 <= people_heat <= 12000:
+    def get_reward(self,observation):
+        people_heat = observation["people_heat_sensor"]
+        if  80000<= people_heat <= 10000:
             self.reward = 50
             self.n_done += 1
         elif people_heat < 0:
-            self.reward = -100
+            self.reward = -1000
         else:
             self.reward = -1
 
@@ -156,8 +191,8 @@ def plot_episode_stats(stats, smoothing_window=500, noshow=False):
 
         # Plot the episode reward over time
     fig4 = plt.figure(figsize=(10, 5))
-    plt.plot(np.array(stats.people))
-    people_smoothed = pd.Series(np.array(stats.people)).rolling(smoothing_window,
+    plt.plot(np.array(stats.people_sensor))
+    people_smoothed = pd.Series(np.array(stats.people_sensor)).rolling(smoothing_window,
                                                                           min_periods=smoothing_window).mean()
     plt.plot(people_smoothed)
     plt.xlabel("steps")
@@ -170,8 +205,8 @@ def plot_episode_stats(stats, smoothing_window=500, noshow=False):
         fig4.show()
 
     fig5 = plt.figure(figsize=(10, 5))
-    plt.plot(np.array(stats.peopleheat))
-    peopleheat_smoothed = pd.Series(np.array(stats.peopleheat)).rolling(smoothing_window,
+    plt.plot(np.array(stats.people_heat_sensor))
+    peopleheat_smoothed = pd.Series(np.array(stats.people_heat_sensor)).rolling(smoothing_window,
                                                                 min_periods=smoothing_window).mean()
     plt.plot(peopleheat_smoothed)
     plt.xlabel("steps")

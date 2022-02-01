@@ -78,7 +78,7 @@ class PopHeatEnv(Env):
         return self.state[0]
 
     def get_reward(self,people_heat):
-        if 10000 <= people_heat <= 10500:
+        if 8000 <= people_heat <= 10000:
             self.reward = 50
             self.n_done += 1
         elif people_heat < 0:
@@ -92,7 +92,7 @@ class PopHeatEnv(Env):
         # Set placeholder for info
         info = {}
         done = False
-        if self.n_done == 5:
+        if self.n_done == 18:
             done = True
 
         # Return step information

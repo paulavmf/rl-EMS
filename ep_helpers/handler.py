@@ -10,25 +10,27 @@ from pathlib import Path
 import pickle
 import os
 
-one_time = True
-first_step_in_episode = True
-step_in_episode = 0
-stats = None
-matplotlib.style.use('ggplot')
-env = None
-env_state = None
-ith_episode = 0
-Q = None
-count = 0
-obs = tuple()
-action = 0
-first_step = True
-next_obs = tuple()
-LEARNING_RATE = 0.1
-DISCOUNT = 0.95
-EPSILON = 0.1
-episode_reward = 0
-episode = 0
+def set_globals():
+    one_time = True
+    first_step_in_episode = True
+    step_in_episode = 0
+    stats = None
+    matplotlib.style.use('ggplot')
+    env = None
+    env_state = None
+    ith_episode = 0
+    Q = None
+    count = 0
+    obs = tuple()
+    action = 0
+    first_step = True
+    next_obs = tuple()
+    LEARNING_RATE = 0.1
+    DISCOUNT = 0.95
+    EPSILON = 0.1
+    episode_reward = 0
+    episode = 0
+    return globals()
 
 class rl_handler():
     def __init__(self,api, environment, actuators, sensors, folder, Qtable_pickle_file = None):
@@ -47,12 +49,15 @@ class rl_handler():
 
     def create_q_table(self, env):
         if self.q_table_file:
-            myfile = open(self.q_table_file, 'rb')
-            qtable = pickle.load(myfile)
-            Q = defaultdict(lambda: np.zeros(env.action_space.n), qtable)
+            if os.path.isfile(self.q_table_file):
+                myfile = open(self.q_table_file, 'rb')
+                qtable = pickle.load(myfile)
+                Q = defaultdict(lambda: np.zeros(env.action_space.n), qtable)
+            else:
+                # no me queda claro de estar haciendo bien esto
+                # Q = np.zeros((env.observation_space.shape[0], env.action_space.n))
+                Q = defaultdict(lambda: np.zeros(env.action_space.n))
         else:
-            # no me queda claro de estar haciendo bien esto
-            # Q = np.zeros((env.observation_space.shape[0], env.action_space.n))
             Q = defaultdict(lambda: np.zeros(env.action_space.n))
         return Q
 
@@ -62,17 +67,6 @@ class rl_handler():
         finally:
             Path(self.logfile).touch()
 
-    def init_stats(self):
-        # TODO todo el tema de estadística debería estar en el environment
-        episode_rewards = 0
-        # Keeps track of useful statistics
-        stats = plotting.EpisodeStats(
-            episode_lengths=list(),
-            episode_rewards=list(),
-            power_consumption=list(),
-            Temperature=list()
-        )
-        return stats
 
     def write_info_logs_episode(self,episode):
         log = f"**********************START EPISODE{episode}***************************\n " \
@@ -122,7 +116,7 @@ class rl_handler():
                 # TODO puede una variable de objeto ser global?????
                 env = self.environment()
                 Q = self.create_q_table(env)
-                stats = self.init_stats()
+                stats = env.init_stats()
                 ####
                 one_time = False
 
@@ -141,8 +135,8 @@ class rl_handler():
                 # OPCIÓN 2:
                 self.observation[sensor["name"]] = self.api.exchange.get_variable_value(state, globals()[sensor["name"]])
 
-            stats.Temperature.append(self.observation["WestZoneTemp"])
-            stats.power_consumption.append(self.observation["Whole_Building_Power"])
+            stats = env.update_stats(stats,self.observation)
+
             # Only entry here if is the very first step, is Done, Or day ends
             if first_step_in_episode == True:
                 stats.episode_lengths.append(step_in_episode)
@@ -176,7 +170,7 @@ class rl_handler():
                 new_actuator_value = dict()
                 for actuator in self.actuators:
                     actuator_value[actuator["name"]] = self.api.exchange.get_actuator_value(state,globals()[actuator["name"]])
-                    new_actuator_value[actuator["name"]] = env.apply_action(action, actuator_value[actuator["name"]])
+                    new_actuator_value[actuator["name"]] = env.apply_action(self.observation, action)
 
             else:
                 log = self.write_info_logs(episode,step_in_episode,count)
@@ -218,7 +212,9 @@ class rl_handler():
                     new_actuator_value = dict()
                     actuator_value = dict()
                     for actuator in self.actuators:
-                        actuator_value[actuator["name"]] = self.api.exchange.get_actuator_value(state, globals()[actuator["name"]])
-                        new_actuator_value[actuator["name"]] = env.apply_action(action,
-                                                                                actuator_value[actuator["name"]])
+                        # actuator_value[actuator["name"]] = self.api.exchange.get_actuator_value(state, globals()[actuator["name"]])
+                        new_actuator_value[actuator["name"]] = env.apply_action(self.observation, action
+                                                                                )
+                        # new_actuator_value[actuator["name"]] = env.apply_action(action,
+                        #                                                         actuator_value[actuator["name"]])
                         self.api.exchange.set_actuator_value(state,globals()[actuator["name"]],new_actuator_value[actuator["name"]])
